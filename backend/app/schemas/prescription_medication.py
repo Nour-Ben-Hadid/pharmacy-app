@@ -1,23 +1,19 @@
+from sqlalchemy import Column, Integer, String, ForeignKey
+from app.database import Base
 from pydantic import BaseModel
-from app import schemas
+
+class PrescriptionMedication(Base):
+    __tablename__ = "prescription_medications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prescription_id = Column(Integer, ForeignKey("prescriptions.id"))  
+    dosage = Column(String)  
+    frequency = Column(String) 
+    duration = Column(String) 
 
 
-# Used inside PrescriptionCreate to describe each med
 class PrescriptionMedicationCreate(BaseModel):
-    medication_name: str
+    medication_name: str  
     dosage: str
     frequency: str
-
-# Read schema
-class PrescriptionMedication(BaseModel):
-    id :int 
-    medication_id: int
-    prescription_id: int
-    medication_name: str
-    dosage: str
-    frequency: str
-    medication:schemas.Medication
-
-    model_config = {
-        "from_attributes": True
-    }
+    duration: str

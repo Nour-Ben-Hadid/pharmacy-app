@@ -1,40 +1,35 @@
-'''from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app import crud, schemas
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session, joinedload
+from typing import List
 from app.database import get_db
+from app.models.prescription import Prescription
+from app.schemas.prescription import PrescriptionCreate, PrescriptionResponse
+from app.crud.prescription import create_prescription, get_prescription, fulfill_prescription
 
-router = APIRouter()
+router = APIRouter(prefix="/prescriptions", tags=["prescriptions"])
 
-@router.post("/", response_model=schemas.Prescription)
-def create_prescription(prescription: schemas.PrescriptionCreate, db: Session = Depends(get_db)):
-    return crud.create_prescription(db, prescription)
+@router.post("/", response_model=PrescriptionResponse)
+def create_new_prescription(
+    prescription: PrescriptionCreate, 
+    db: Session = Depends(get_db)
+):
+    return create_prescription(db, prescription)
 
-@router.get("/{prescription_id}", response_model=schemas.Prescription)
-def get_prescription_by_id(prescription_id: int, db: Session = Depends(get_db)):
-    prescription = crud.get_prescription_by_id(db=db, prescription_id=prescription_id)
-    if prescription is None:
+
+@router.get("/{prescription_id}", response_model=PrescriptionResponse)
+def get_prescription(prescription_id: int, db: Session = Depends(get_db)):
+    prescription = db.query(Prescription).options(
+        joinedload(Prescription.medications)
+    ).filter(Prescription.id == prescription_id).first()
+    
+    if not prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
+    
     return prescription
 
-@router.get("/", response_model=list[schemas.Prescription])
-def get_prescriptions(db: Session = Depends(get_db)):
-    try:
-        prescriptions = crud.get_all_prescriptions(db)
-        return prescriptions
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{prescription_id}", response_model=schemas.Prescription)
-def update_prescription(prescription_id: int, prescription: schemas.PrescriptionCreate, db: Session = Depends(get_db)):
-    updated_prescription = crud.update_prescription(db=db, prescription_id=prescription_id, prescription=prescription)
-    if updated_prescription is None:
-        raise HTTPException(status_code=404, detail="Prescription not found")
-    return updated_prescription
-
-@router.delete("/{prescription_id}")
-def delete_prescription(prescription_id: int, db: Session = Depends(get_db)):
-    success = crud.delete_prescription(db=db, prescription_id=prescription_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Prescription not found")
-    return {"message": "Prescription deleted successfully"}
-'''
+@router.patch("/{prescription_id}/fulfill", response_model=PrescriptionResponse)
+def fulfill_prescription_endpoint(
+    prescription_id: int, 
+    db: Session = Depends(get_db)
+):
+    return fulfill_prescription(db, prescription_id)

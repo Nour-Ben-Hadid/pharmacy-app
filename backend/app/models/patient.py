@@ -1,3 +1,4 @@
+from __future__ import annotations 
 from sqlalchemy import Column, Integer, String , Date
 from sqlalchemy.orm import relationship
 from app.database import Base

@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+'''from sqlalchemy.orm import Session
 from app import models, schemas
 from fastapi import HTTPException
 
@@ -39,3 +39,4 @@ def delete_prescription_medication(db: Session, link_id: int):
     db.delete(link)
     db.commit()
     return {"message": "Prescription-medication link deleted"}
+'''

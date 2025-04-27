@@ -1,3 +1,4 @@
+from __future__ import annotations 
 from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -11,4 +12,6 @@ class Medication(Base):
     dosage_form = Column(String)                   
     strength = Column(String)                      
     stock_quantity = Column(Integer)               
-    price = Column(Float)        
+    price = Column(Float) 
+
+    prescriptions = relationship("app.models.prescription_medication.PrescriptionMedication", back_populates="medication")
