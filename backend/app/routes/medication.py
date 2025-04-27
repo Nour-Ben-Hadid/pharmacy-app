@@ -1,35 +1,56 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app import crud, schemas
+from typing import List
 from app.database import get_db
+from app.models.medication import Medication
+from app.schemas.medication import (
+    MedicationCreate,
+    MedicationResponse,
+    MedicationUpdate
+)
+from app.crud.medication import (
+    create_medication,
+    get_medication,
+    get_medication_by_name,
+    update_medication,
+    delete_medication
+)
 
-router = APIRouter()
+router = APIRouter(prefix="/medications", tags=["medications"])
 
-@router.post("/", response_model=schemas.Medication)
-def create_medication(medication: schemas.MedicationCreate, db: Session = Depends(get_db)):
-    return crud.create_medication(db=db, medication=medication)
+@router.post("/", response_model=MedicationResponse)
+def add_medication(medication: MedicationCreate, db: Session = Depends(get_db)):
+    if get_medication_by_name(db, medication.name):
+        raise HTTPException(status_code=400, detail="Medication already exists")
+    return create_medication(db, medication)
 
-@router.get("/{medication_id}", response_model=schemas.Medication)
-def get_medication_by_id(medication_id: int, db: Session = Depends(get_db)):
-    medication = crud.get_medication_by_id(db=db, medication_id=medication_id)
-    if medication is None:
+@router.get("/", response_model=List[MedicationResponse])
+def list_medications(db: Session = Depends(get_db)):
+    return db.query(Medication).all()
+
+@router.get("/{medication_id}", response_model=MedicationResponse)
+def read_medication(medication_id: int, db: Session = Depends(get_db)):
+    db_medication = get_medication(db, medication_id)
+    if not db_medication:
         raise HTTPException(status_code=404, detail="Medication not found")
-    return medication
+    return db_medication
 
-@router.get("/", response_model=list[schemas.Medication])
-def get_medications(db: Session = Depends(get_db)):
-    return crud.get_all_medications(db=db)
-
-@router.put("/{medication_id}", response_model=schemas.Medication)
-def update_medication(medication_id: int, medication: schemas.MedicationCreate, db: Session = Depends(get_db)):
-    updated_medication = crud.update_medication(db=db, medication_id=medication_id, medication=medication)
-    if updated_medication is None:
+@router.get("/by-name/{medication_name}",response_model=MedicationResponse)
+def read_medication_by_name(medication_name:str ,db:Session=Depends(get_db)):
+    db_medication=get_medication_by_name(db,medication_name)
+    if not db_medication:
         raise HTTPException(status_code=404, detail="Medication not found")
-    return updated_medication
+    return db_medication
+
+@router.patch("/{medication_id}", response_model=MedicationResponse)
+def edit_medication(medication_id: int, medication: MedicationUpdate, db: Session = Depends(get_db)):
+    db_medication = update_medication(db, medication_id, medication)
+    if not db_medication:
+        raise HTTPException(status_code=404, detail="Medication not found")
+    return db_medication
 
 @router.delete("/{medication_id}")
-def delete_medication(medication_id: int, db: Session = Depends(get_db)):
-    success = crud.delete_medication(db=db, medication_id=medication_id)
-    if not success:
+def remove_medication(medication_id: int, db: Session = Depends(get_db)):
+    if not delete_medication(db, medication_id):
         raise HTTPException(status_code=404, detail="Medication not found")
-    return {"message": "Medication deleted successfully"}
+    return {"message": "Medication deleted"}

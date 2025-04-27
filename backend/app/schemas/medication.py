@@ -1,15 +1,32 @@
 from pydantic import BaseModel
+from typing import Optional
 
-class MedicationBase(BaseModel):
+class MedicationCreate(BaseModel):
     name: str
+    description: Optional[str] = None
+    dosage_form: str
+    strength: str
+    stock_quantity: int
+    price: float
 
-class MedicationCreate(MedicationBase):
-    pass
-
-class Medication(MedicationBase):
+class MedicationResponse(BaseModel):
     id: int
+    name: str
+    description: Optional[str] = None
+    dosage_form: str
+    strength: str
+    stock_quantity: int
+    price: float
 
     model_config = {
     "from_attributes": True
-}
+} 
+    
 
+class MedicationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    dosage_form: Optional[str] = None
+    strength: Optional[str] = None
+    stock_quantity: Optional[int] = None
+    price: Optional[float] = None

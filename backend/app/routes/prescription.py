@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+'''from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import crud, schemas
 from app.database import get_db
@@ -37,3 +37,4 @@ def delete_prescription(prescription_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Prescription not found")
     return {"message": "Prescription deleted successfully"}
+'''
