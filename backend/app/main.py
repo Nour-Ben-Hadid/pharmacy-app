@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.database import Base, engine
-from app.routes import patient, medication, prescription ,doctor
+from app.routes import patient, medication, prescription ,doctor , pharmacist
 
 Base.metadata.create_all(bind=engine)
 
@@ -11,6 +11,7 @@ app.include_router(patient.router)
 app.include_router(medication.router)
 app.include_router(prescription.router)
 app.include_router(doctor.router)
+app.include_router(pharmacist.router)
 
 @app.get("/")
 def read_root():

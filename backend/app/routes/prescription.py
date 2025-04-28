@@ -4,6 +4,7 @@ from typing import List
 from app.database import get_db
 from app.models.prescription import Prescription
 from app.schemas.prescription import PrescriptionCreate, PrescriptionResponse
+from app.models.prescription_medication import PrescriptionMedication
 from app.crud.prescription import create_prescription, get_prescription, fulfill_prescription
 
 router = APIRouter(prefix="/prescriptions", tags=["prescriptions"])
