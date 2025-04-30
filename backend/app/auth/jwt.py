@@ -5,6 +5,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+import os
+from dotenv import load_dotenv
+
+# Loading environment variables from .env file
+load_dotenv()
 
 from app.schemas.pharmacist import PharmacistResponse
 from app.models.pharmacist import Pharmacist
@@ -13,12 +18,12 @@ from app.models.patient import Patient
 from app.database import get_db
 
 # JWT configuration
-SECRET_KEY = "YOUR_SECRET_KEY_HERE"  # In production, use a secure random key stored in environment variables
+# Using environment variable for security, with a fallback for development
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY","secretttt")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Token URLs - where clients will send username/password to get token
-# Update with security scheme names for Swagger UI to identify them
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="auth/token", 
     auto_error=False,

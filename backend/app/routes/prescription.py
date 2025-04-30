@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from typing import List, Optional
+from datetime import date
 from app.database import get_db
 from app.models.prescription import Prescription
 from app.schemas.prescription import PrescriptionCreate, PrescriptionResponse, PrescriptionUpdate
@@ -56,6 +57,63 @@ async def get_patient_prescriptions_endpoint(
     prescriptions = get_patient_prescriptions(db, current_patient.ssn)
     
     # Return all prescriptions for this patient
+    return prescriptions
+
+@router.get("/all", response_model=List[PrescriptionResponse])
+async def get_all_prescriptions(
+    current_pharmacist: Pharmacist = Depends(get_current_pharmacist),
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    patient_ssn: Optional[str] = None,
+    doctor_license: Optional[str] = None,
+    status: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
+):
+    """
+    Get all prescriptions with optional filtering - pharmacists only
+    
+    - patient_ssn: Filter by patient SSN
+    - doctor_license: Filter by doctor license number
+    - status: Filter by status (pending/fulfilled)
+    - start_date: Filter prescriptions issued on or after this date
+    - end_date: Filter prescriptions issued on or before this date
+    """
+    # Only pharmacists can access all prescriptions
+    # The get_current_pharmacist dependency already ensures this
+    
+    # Start building the query
+    query = db.query(Prescription)
+    
+    # Apply filters if provided
+    if patient_ssn:
+        query = query.filter(Prescription.patient_ssn == patient_ssn)
+    
+    if doctor_license:
+        query = query.filter(Prescription.doctor_license == doctor_license)
+    
+    if status:
+        query = query.filter(Prescription.status == status)
+    
+    if start_date:
+        query = query.filter(Prescription.date_issued >= start_date)
+    
+    if end_date:
+        query = query.filter(Prescription.date_issued <= end_date)
+        
+    # Get total count for pagination info
+    total = query.count()
+    
+    # Apply pagination and fetch results with medications
+    prescriptions = query.options(
+        joinedload(Prescription.medications)
+    ).order_by(Prescription.date_issued.desc()).offset(skip).limit(limit).all()
+    
+    # Add response headers with pagination info
+    # Note: FastAPI doesn't directly support this, would need a custom response class
+    # So for now, we'll just return the prescriptions
+    
     return prescriptions
 
 # Variable path parameter routes come AFTER the fixed routes
