@@ -5,7 +5,7 @@ from app.database import Base
 
 class PrescriptionMedication(Base):
     __tablename__ = 'prescription_medications'
-    __table_args__ = {'extend_existing': True}  
+    __table_args__ = {'extend_existing': True , 'sqlite_autoincrement': True}  
 
     id = Column(Integer, primary_key=True, index=True)
     prescription_id = Column(Integer, ForeignKey('prescriptions.id'))

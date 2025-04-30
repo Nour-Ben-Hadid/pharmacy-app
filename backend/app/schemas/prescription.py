@@ -1,23 +1,20 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
-from app.schemas.prescription_medication import PrescriptionMedicationCreate, PrescriptionMedication
+from app.schemas.prescription_medication import PrescriptionMedicationCreate, PrescriptionMedicationResponse
 
 class PrescriptionCreate(BaseModel):
-    patient_ssn:str
-    doctor_license:str
+    patient_ssn: str
+    doctor_license: str
     medications: List[PrescriptionMedicationCreate]
 
+# Schema for updating prescriptions - status is excluded as it can only be changed 
+# by pharmacists during fulfillment
+class PrescriptionUpdate(BaseModel):
+    patient_ssn: Optional[str] = None
+    medications: Optional[List[PrescriptionMedicationCreate]] = None
 
-class PrescriptionMedicationBase(BaseModel):
-    medication_name: str
-    dosage: str
-    frequency: str
-    duration: str
-
-
-class PrescriptionMedicationResponse(PrescriptionMedicationBase):
-    id: int
+# Using the models defined in prescription_medication.py instead of redefining them here
 
 class PrescriptionResponse(BaseModel):
     id: int
