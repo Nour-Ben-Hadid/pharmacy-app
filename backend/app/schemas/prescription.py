@@ -23,6 +23,8 @@ class PrescriptionResponse(BaseModel):
     date_issued: date
     status: str
     medications: List[PrescriptionMedicationResponse]
+    patient_name: Optional[str] = None  # Add patient name field
+    doctor_name: Optional[str] = None   # Add doctor name field
 
     class Config:
         from_attributes = True

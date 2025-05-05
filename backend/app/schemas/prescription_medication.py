@@ -9,6 +9,7 @@ class PrescriptionMedicationCreate(BaseModel):
 class PrescriptionMedicationResponse(BaseModel):
     id: int
     prescription_id: int
+    medication_name: str  # Added medication_name field
     dosage: str
     frequency: str
     duration: str

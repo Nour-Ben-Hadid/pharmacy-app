@@ -112,8 +112,106 @@ def update_prescription(db: Session, prescription_id: int, prescription_update: 
 
 def get_doctor_prescriptions(db: Session, doctor_license: str):
     """Get all prescriptions written by a specific doctor"""
-    return db.query(Prescription).filter(Prescription.doctor_license == doctor_license).all()
+    # Return prescription objects with patient and doctor names via join
+    results = db.query(
+        Prescription, 
+        Patient.name.label("patient_name"), 
+        Doctor.name.label("doctor_name")
+    ).join(
+        Patient, Prescription.patient_ssn == Patient.ssn
+    ).join(
+        Doctor, Prescription.doctor_license == Doctor.license_number
+    ).filter(
+        Prescription.doctor_license == doctor_license
+    ).all()
+    
+    # Process results to include names in the response
+    prescriptions = []
+    for result in results:
+        prescription, patient_name, doctor_name = result
+        
+        # Load medications for the prescription with medication name
+        medications_data = db.query(PrescriptionMedication).filter(
+            PrescriptionMedication.prescription_id == prescription.id
+        ).all()
+        
+        # Create the formatted medications list with complete information
+        medications = []
+        for med in medications_data:
+            medications.append({
+                "id": med.id,
+                "prescription_id": med.prescription_id,
+                "medication_name": med.medication_name,
+                "dosage": med.dosage,
+                "frequency": med.frequency,
+                "duration": med.duration
+            })
+        
+        # Create a dictionary representation of the prescription with names
+        prescription_dict = {
+            "id": prescription.id,
+            "patient_ssn": prescription.patient_ssn,
+            "doctor_license": prescription.doctor_license,
+            "date_issued": prescription.date_issued,
+            "status": prescription.status,
+            "medications": medications,
+            "patient_name": patient_name,
+            "doctor_name": doctor_name
+        }
+        
+        prescriptions.append(prescription_dict)
+    
+    return prescriptions
 
 def get_patient_prescriptions(db: Session, patient_ssn: str):
     """Get all prescriptions for a specific patient"""
-    return db.query(Prescription).filter(Prescription.patient_ssn == patient_ssn).all()
+    # Return prescription objects with patient and doctor names via join
+    results = db.query(
+        Prescription, 
+        Patient.name.label("patient_name"), 
+        Doctor.name.label("doctor_name")
+    ).join(
+        Patient, Prescription.patient_ssn == Patient.ssn
+    ).join(
+        Doctor, Prescription.doctor_license == Doctor.license_number
+    ).filter(
+        Prescription.patient_ssn == patient_ssn
+    ).all()
+    
+    # Process results to include names in the response
+    prescriptions = []
+    for result in results:
+        prescription, patient_name, doctor_name = result
+        
+        # Load medications for the prescription with medication name
+        medications_data = db.query(PrescriptionMedication).filter(
+            PrescriptionMedication.prescription_id == prescription.id
+        ).all()
+        
+        # Create the formatted medications list with complete information
+        medications = []
+        for med in medications_data:
+            medications.append({
+                "id": med.id,
+                "prescription_id": med.prescription_id,
+                "medication_name": med.medication_name,
+                "dosage": med.dosage,
+                "frequency": med.frequency,
+                "duration": med.duration
+            })
+        
+        # Create a dictionary representation of the prescription with names
+        prescription_dict = {
+            "id": prescription.id,
+            "patient_ssn": prescription.patient_ssn,
+            "doctor_license": prescription.doctor_license,
+            "date_issued": prescription.date_issued,
+            "status": prescription.status,
+            "medications": medications,
+            "patient_name": patient_name,
+            "doctor_name": doctor_name
+        }
+        
+        prescriptions.append(prescription_dict)
+    
+    return prescriptions

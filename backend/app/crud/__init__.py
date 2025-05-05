@@ -1,6 +1,0 @@
-
-'''from .patient import create_patient, get_patient,get_all_patients, update_patient, delete_patient
-from .medication import create_medication, get_medication_by_id, get_medication_by_name,get_all_medications ,update_medication, delete_medication
-from .prescription import create_prescription, get_prescription_by_id,get_all_prescriptions,update_prescription, delete_prescription
-from .prescription_medication import add_medication_to_prescription , get_all_prescription_medications,get_by_id,update_prescription_medication,delete_prescription_medication
-'''

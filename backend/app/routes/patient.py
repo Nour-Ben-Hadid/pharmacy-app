@@ -4,7 +4,7 @@ from typing import List
 from app.database import get_db
 from app.models.patient import Patient
 from app.schemas.patient import PatientCreate, PatientResponse, PatientUpdate
-from app.auth.jwt import get_current_active_patient, get_current_active_pharmacist, get_current_user
+from app.auth.jwt import get_current_active_patient, get_current_active_pharmacist, get_current_user, get_current_active_doctor
 from app.crud.patient import (
     create_patient,
     get_patient,
@@ -37,6 +37,16 @@ def list_patients(
 def read_current_patient(current_patient: Patient = Depends(get_current_active_patient)):
     """Get the current authenticated patient's information"""
     return current_patient
+
+@router.get("/doctor", response_model=List[PatientResponse])
+def list_doctor_patients(
+    db: Session = Depends(get_db),
+    current_doctor = Depends(get_current_active_doctor)
+):
+    """List all patients for the current doctor - requires doctor authentication"""
+    # In a real-world scenario, you'd filter patients that are only assigned to this doctor
+    # For now, return all patients as demo data
+    return db.query(Patient).all()
 
 @router.get("/{ssn}", response_model=PatientResponse)
 def read_patient(
@@ -71,10 +81,8 @@ def update_patient_info(
     if current_user.user_type == "patient" and current_user.id != db_patient.id:
         raise HTTPException(status_code=403, detail="Not authorized to update other patient profiles")
     
-    # Convert the Pydantic model to a dict, excluding unset values
-    update_data = patient_update.model_dump(exclude_unset=True)
-    
-    db_patient = update_patient(db, ssn, update_data)
+    # Pass the PatientUpdate object directly instead of converting to dict
+    db_patient = update_patient(db, ssn, patient_update)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     return db_patient

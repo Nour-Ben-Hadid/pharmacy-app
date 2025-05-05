@@ -84,7 +84,10 @@ async def get_all_prescriptions(
     # The get_current_pharmacist dependency already ensures this
     
     # Start building the query
-    query = db.query(Prescription)
+    # Modified to join with Patient and Doctor to get names
+    query = db.query(Prescription, Patient.name.label("patient_name"), Doctor.name.label("doctor_name")).\
+        join(Patient, Prescription.patient_ssn == Patient.ssn).\
+        join(Doctor, Prescription.doctor_license == Doctor.license_number)
     
     # Apply filters if provided
     if patient_ssn:
@@ -103,16 +106,35 @@ async def get_all_prescriptions(
         query = query.filter(Prescription.date_issued <= end_date)
         
     # Get total count for pagination info
+    # Need to adapt count() for join query
     total = query.count()
     
-    # Apply pagination and fetch results with medications
-    prescriptions = query.options(
-        joinedload(Prescription.medications)
-    ).order_by(Prescription.date_issued.desc()).offset(skip).limit(limit).all()
+    # Apply pagination and fetch results
+    results = query.order_by(Prescription.date_issued.desc()).offset(skip).limit(limit).all()
     
-    # Add response headers with pagination info
-    # Note: FastAPI doesn't directly support this, would need a custom response class
-    # So for now, we'll just return the prescriptions
+    # Process results to include names
+    prescriptions = []
+    for result in results:
+        prescription, patient_name, doctor_name = result
+        
+        # Load medications for the prescription
+        medications = db.query(PrescriptionMedication).filter(
+            PrescriptionMedication.prescription_id == prescription.id
+        ).all()
+        
+        # Create a dictionary representation of the prescription with names
+        prescription_dict = {
+            "id": prescription.id,
+            "patient_ssn": prescription.patient_ssn,
+            "doctor_license": prescription.doctor_license,
+            "date_issued": prescription.date_issued,
+            "status": prescription.status,
+            "medications": medications,
+            "patient_name": patient_name,
+            "doctor_name": doctor_name
+        }
+        
+        prescriptions.append(prescription_dict)
     
     return prescriptions
 
@@ -123,12 +145,23 @@ async def get_prescription_endpoint(
     current_user: UserInfo = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prescription = db.query(Prescription).options(
-        joinedload(Prescription.medications)
-    ).filter(Prescription.id == prescription_id).first()
+    # Query prescription with join to get patient and doctor names
+    result = db.query(
+        Prescription, 
+        Patient.name.label("patient_name"), 
+        Doctor.name.label("doctor_name")
+    ).join(
+        Patient, Prescription.patient_ssn == Patient.ssn
+    ).join(
+        Doctor, Prescription.doctor_license == Doctor.license_number
+    ).filter(
+        Prescription.id == prescription_id
+    ).first()
     
-    if not prescription:
+    if not result:
         raise HTTPException(status_code=404, detail="Prescription not found")
+    
+    prescription, patient_name, doctor_name = result
     
     # Authorization check: only pharmacists, the prescribing doctor, or the patient can view
     if current_user.user_type == "pharmacist":
@@ -147,7 +180,36 @@ async def get_prescription_endpoint(
     else:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
-    return prescription
+    # Load medications for the prescription with complete details
+    medications_data = db.query(PrescriptionMedication).filter(
+        PrescriptionMedication.prescription_id == prescription.id
+    ).all()
+    
+    # Create the formatted medications list with complete information
+    medications = []
+    for med in medications_data:
+        medications.append({
+            "id": med.id,
+            "prescription_id": med.prescription_id,
+            "medication_name": med.medication_name,
+            "dosage": med.dosage,
+            "frequency": med.frequency,
+            "duration": med.duration
+        })
+    
+    # Create response with names included
+    prescription_dict = {
+        "id": prescription.id,
+        "patient_ssn": prescription.patient_ssn,
+        "doctor_license": prescription.doctor_license,
+        "date_issued": prescription.date_issued,
+        "status": prescription.status,
+        "medications": medications,
+        "patient_name": patient_name,
+        "doctor_name": doctor_name
+    }
+    
+    return prescription_dict
 
 @router.patch("/{prescription_id}/fulfill", response_model=PrescriptionResponse)
 def fulfill_prescription_endpoint(
@@ -186,3 +248,41 @@ def update_prescription_endpoint(
         )
     
     return update_prescription(db, prescription_id, prescription_update)
+
+@router.delete("/{prescription_id}", status_code=204)
+def delete_prescription_endpoint(
+    prescription_id: int,
+    current_doctor: Doctor = Depends(get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a prescription by ID - only available for doctors who created the prescription
+    and only if the prescription hasn't been fulfilled yet
+    """
+    # First check if the prescription exists
+    prescription = db.query(Prescription).filter(Prescription.id == prescription_id).first()
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    
+    # Check if the current doctor is the one who wrote the prescription
+    if current_doctor.license_number != prescription.doctor_license:
+        raise HTTPException(
+            status_code=403, 
+            detail="You can only delete prescriptions you created"
+        )
+    
+    # Check if the prescription is already fulfilled - can't delete fulfilled prescriptions
+    if prescription.status == "fulfilled":
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete a prescription that has already been fulfilled"
+        )
+    
+    # Delete related prescription medications first (to avoid foreign key constraint errors)
+    db.query(PrescriptionMedication).filter(PrescriptionMedication.prescription_id == prescription_id).delete()
+    
+    # Delete the prescription
+    db.query(Prescription).filter(Prescription.id == prescription_id).delete()
+    db.commit()
+    
+    return None  # 204 No Content response doesn't need a body

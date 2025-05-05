@@ -21,7 +21,7 @@ from app.database import get_db
 # Using environment variable for security, with a fallback for development
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY","secretttt")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # Token URLs - where clients will send username/password to get token
 oauth2_scheme = OAuth2PasswordBearer(
